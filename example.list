@@ -1,0 +1,14 @@
+href="https://exmaple.com/"
+title="index.html"
+this is example
+--
+href="https://exmaple.com/index.html"
+title="next.html"
+next target
+--
+href="https://exmaple.com/another.ogg"
+title="another.ogg"
+can trim title and this middle title
+--
+href="https://exmaple.com/index.html"
+--
