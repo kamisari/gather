@@ -51,7 +51,7 @@ func init() {
 	flag.Int64Var(&opt.delayMin, "delay-min", 1, "random delay minimal seconds")
 	flag.Int64Var(&opt.delayMax, "delay-max", 10, "random delay maximal seconds")
 
-	flag.BoolVar(&opt.trimNumber, "trim-number", false, "trim prefix number(TODO: implementation)")
+	flag.BoolVar(&opt.trimNumber, "trim-number", false, "trim prefix number")
 }
 
 func get(url string, out string) error {
