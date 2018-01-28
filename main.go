@@ -23,25 +23,8 @@ import (
 	"time"
 )
 
-func get(url string, out string) error {
-	f, err := os.Create(out)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	resp, err := http.Get(url)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	_, err = io.Copy(f, resp.Body)
-	return err
-}
-
-const version = "0.0.0"
 const name = "gather"
+const version = "0.0.3dev"
 
 type option struct {
 	version bool
@@ -71,13 +54,30 @@ func init() {
 	flag.BoolVar(&opt.trimNumber, "trim-number", false, "trim prefix number(TODO: implementation)")
 }
 
+func get(url string, out string) error {
+	f, err := os.Create(out)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	_, err = io.Copy(f, resp.Body)
+	return err
+}
+
 func main() {
 	// TODO: consider exit code
 	var exitcode int
 	// TODO: consider logger
 	logger := log.New(os.Stderr, "["+name+"]:", log.LstdFlags)
 
-	// flag
+	// parse flags
 	flag.Parse()
 	if flag.NArg() == 1 && opt.list == "" {
 		opt.list = flag.Arg(0)
@@ -90,44 +90,53 @@ func main() {
 		fmt.Printf("%s version %s\n", name, version)
 	}
 
+	// check list
+	if opt.list == "" {
+		flag.Usage()
+		logger.Fatal("expected list file")
+	}
+
 	// output directory
 	outdir, err := filepath.Abs(opt.dir)
 	if err != nil {
 		logger.Fatal(err)
 	}
-	if err := os.MkdirAll(outdir, 0777); err != nil {
-		logger.Fatal(err)
+	if !opt.dryRun {
+		if err := os.MkdirAll(outdir, 0777); err != nil {
+			logger.Fatal(err)
+		}
 	}
 
-	// list
-	if opt.list == "" {
-		flag.Usage()
-		logger.Fatal("expected list file")
-	}
+	// for loop
 	f, err := os.Open(opt.list)
 	if err != nil {
 		logger.Fatal(err)
 	}
 	defer f.Close()
-
-	// loop
-	sc := bufio.NewScanner(f)
-	var i int
 	var (
-		url, midTitle, title, out string
-		trunc                     = func() {
-			url = ""
-			midTitle = ""
-			title = ""
-			out = ""
-		}
+		sc  = bufio.NewScanner(f)
+		url string
+
+		out   string
 		mkout = func(out *string, add string) {
 			switch {
 			case *out == "":
 				*out = add
 			default:
-				*out = fmt.Sprintf("%s-%s", *out, add)
+				*out = fmt.Sprintf("%s - %s", *out, add)
 			}
+		}
+
+		// for out name
+		i        int
+		midTitle string
+		title    string
+
+		trunc = func() {
+			url = ""
+			midTitle = ""
+			title = ""
+			out = ""
 		}
 	)
 	for sc.Scan() {
@@ -140,11 +149,11 @@ func main() {
 		switch {
 		case text == "":
 			continue
-		case text == "--" && url != "":
+		case (text == "--" || text == "---") && url != "":
 			i++
 
 			// TODO: consider
-			// name
+			// make name
 			if !opt.trimNumber {
 				out = fmt.Sprintf("%d", i)
 			}
@@ -173,9 +182,9 @@ func main() {
 			// get
 			delay := time.Second * time.Duration(opt.delayMin+rand.Int63n(opt.delayMax))
 			if opt.dryRun {
-				logger.Printf("[dry-run get %d]:\n\t[url]: %s\n\t[out]: %s\n\t[delay]: %v\n", i, url, out, delay)
+				fmt.Printf("[dry-run get %d]:\n\t[url]: %s\n\t[out]: %s\n\t[delay]: %v\n", i, url, out, delay)
 			} else {
-				logger.Printf("[get %d]:\n\t[url]: %s\n\t[out]: %s\n\t[delay]: %v\n", i, url, out, delay)
+				fmt.Printf("[get %d]:\n\t[url]: %s\n\t[out]: %s\n\t[delay]: %v\n", i, url, out, delay)
 				if err := get(url, out); err != nil {
 					logger.Fatal(err)
 				}
