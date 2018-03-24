@@ -33,7 +33,7 @@ gather -help
 Install:
 --------
 ```sh
-go get -u github.com/kamisari/gather
+go get -v -u github.com/yaeshimo/gather
 ```
 
 License:
